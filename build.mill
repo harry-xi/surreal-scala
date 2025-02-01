@@ -5,7 +5,8 @@ import mill._, scalalib._
 object `surreal-scala` extends ScalaModule {
   def scalaVersion = "3.6.3"
   def ivyDeps = Agg(
-     ivy"com.surrealdb:surrealdb:0.2.1"
+     ivy"com.surrealdb:surrealdb:0.2.1",
+     ivy"org.apache.commons:commons-text:1.13.0",
   )
 
   object test extends ScalaTests {
