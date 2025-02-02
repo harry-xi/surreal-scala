@@ -59,9 +59,17 @@ class Surreal(val db:com.surrealdb.Surreal) extends AutoCloseable {
         scala.compiletime.error(
           "the vars should be a tuple of (string,?:SurrealEncoder)"
         )
-  def query(sql: String) = db.query(sql)
+  def query(sql: String) = db.query(sql).toSeq
 
 
+  def create = ???
+  def delete = ???
+  def insert = ???
+  def insertRelation = ???
+  def relate = ???
+  def select = ???
+  def update = ???
+  def upsert = ???
 
   override def close(): Unit =
     db.close()
