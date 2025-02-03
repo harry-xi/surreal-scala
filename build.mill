@@ -1,8 +1,17 @@
 //// SNIPPET:BUILD
 package build
-import mill._, scalalib._
+import mill._, scalalib._, publish._
 
-object `surreal-scala` extends ScalaModule {
+object `surreal-scala` extends ScalaModule with PublishModule {
+  def publishVersion = "main-SNAPSHOT"
+  def pomSettings = PomSettings(
+    description = "surreal-scala",
+    organization = "com.github.harry-xi",
+    url = "https://github.com/harry-xi/surreal-scala",
+    licenses = Seq(License.MIT),
+    versionControl = VersionControl.github("harry-xi", "surreal-scala"),
+    developers = Seq(Developer("harryxi", "harryxi", "https://github.com/harry-xi"))
+  )
   def scalaVersion = "3.6.3"
   // def ivyDeps = Agg(
   //    ivy"com.surrealdb:surrealdb:0.2.1",
