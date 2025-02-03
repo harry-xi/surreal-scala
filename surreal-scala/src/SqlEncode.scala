@@ -1,91 +1,70 @@
 package top.harryxi.surreal
 
-import scala.compiletime.ops.string
-import org.apache.commons.text.StringEscapeUtils
 import com.surrealdb.RecordId
+import com.surrealdb.ValueMut
+import com.surrealdb.EntryMut
 import java.util.UUID
 import scala.concurrent.duration.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import scala.collection.JavaConverters.*
 
 trait SurrealEncoder[T]:
-  def encode(v: T): String
-
-case class Raw(str: String)
-
-given SurrealEncoder[Raw] with
-  def encode(v: Raw) = v.str
+  def encode(v: T): ValueMut
 
 object SurreaEncoder {
   import scala.deriving.*
   import scala.compiletime.*
 
   given SurrealEncoder[Double] with
-    def encode(v: Double) = v.toString()
+    def encode(v: Double) = ValueMut.createDouble(v)
 
   given SurrealEncoder[Float] with
-    def encode(v: Float) = v.toString()
+    def encode(v: Float) = ValueMut.createDouble(v.toDouble)
 
   given SurrealEncoder[Int] with
-    def encode(v: Int) = v.toString()
+    def encode(v: Int) = ValueMut.createLong(v.toLong)
 
   given SurrealEncoder[Long] with
-    def encode(v: Long) = v.toString()
+    def encode(v: Long) = ValueMut.createLong(v)
 
   given SurrealEncoder[BigDecimal] with
-    def encode(v: BigDecimal) = v.toString()
+    def encode(v: BigDecimal) = ValueMut.createBigDecimal(v.bigDecimal)
 
   given SurrealEncoder[Boolean] with
-    def encode(v: Boolean): String =
-      v.toString()
+    def encode(v: Boolean) = ValueMut.createBoolean(v)
 
-  given SurrealEncoder[Array[Byte]] with
-    def encode(v: Array[Byte]): String =
-      val base64 = java.util.Base64.getEncoder().encodeToString(v).dropRight(1)
-      s"encoding::base64::decode(\"$base64\")"
+  given stringEncoedr: SurrealEncoder[String] with
+    def encode(v: String) = ValueMut.createString(v)
 
-  given SurrealEncoder[String] with
-    // todo: make sure it is safe
-    def encode(v: String) =
-      "\"" + StringEscapeUtils.ESCAPE_JSON.translate(v) + "\""
-
-  given SurrealEncoder[UUID] with 
-    def encode(v: UUID): String = 
-      "u\""+v.toString()+"\""
-
-  given [D<:Duration]:SurrealEncoder[D] with
-    def encode(v: D): String = 
-      v.toNanos + "ns"
+  given [D <: Duration]: SurrealEncoder[D] with
+    def encode(v: D) = 
+      v.toNanos 
+      |> java.time.Duration.ofNanos
+      |> ValueMut.createDuration
 
   given SurrealEncoder[ZonedDateTime] with
-    def encode(v: ZonedDateTime): String = 
-      "d\"" +v.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)+"\""
+    def encode(v: ZonedDateTime) = ValueMut.createDatetime(v)
 
   given SurrealEncoder[RecordId] with
-    def encode(v: RecordId): String =
-      RecordIdHelper.toSqlStr(v)
+    def encode(v: RecordId) = ValueMut.createThing(v)
 
   given [T](using s: SurrealEncoder[T]): SurrealEncoder[Option[T]] with
     def encode(v: Option[T]) = v match
       case Some(value) => s.encode(value)
-      case None        => "null"
+      case None        => null // todo: make sure it result in a surreal Null not None
 
   given [T](using s: SurrealEncoder[T]): SurrealEncoder[List[T]] with
-    override def encode(x: List[T]): String =
-      if x.isEmpty then "[]" else x.map(s.encode).mkString("[", ", ", "]")
-
-  given [T](using s: SurrealEncoder[T]): SurrealEncoder[Set[T]] with
-    override def encode(x: Set[T]): String =
-      if x.isEmpty then "<set>[]"
-      else x.map(s.encode).mkString("<set>[", ", ", "]")
+    override def encode(x: List[T]) =
+      x.map(s.encode).asJava |> ValueMut.createArray
 
   inline given derived[T](using m: Mirror.Of[T]): SurrealEncoder[T] =
     val elemNames = summonNames[m.MirroredElemLabels]
     val elemInstances = summonInstances[m.MirroredElemTypes]
-    val jsonInfo = elemNames.zip(elemInstances)
+    val info = elemNames.zip(elemInstances)
     inline m match {
-      case _: Mirror.ProductOf[t] => productClass(jsonInfo)
-      case s: Mirror.SumOf[T]     => sumClass(s, jsonInfo)
+      case _: Mirror.ProductOf[t] => productClass(info)
+      // case s: Mirror.SumOf[T]     => sumClass(s, jsonInfo)
     }
 
   inline def summonNames[T <: Tuple]: List[String] =
@@ -103,16 +82,16 @@ object SurreaEncoder {
       classInfo: => List[(String, SurrealEncoder[?])]
   ): SurrealEncoder[T] =
     new SurrealEncoder[T] {
-      override def encode(v: T): String =
+      override def encode(v: T) =
         val fieldIterator = v.asInstanceOf[Product].productIterator
 
         fieldIterator
           .zip(classInfo)
           .map { (value, info) =>
             val (name, instance) = info
-            s"\"${name}\": ${instance.asInstanceOf[SurrealEncoder[Any]].encode(value)}"
-          }
-          .mkString("{", ", ", "}")
+            EntryMut.newEntry(name,instance.asInstanceOf[SurrealEncoder[Any]].encode(value))
+          }.toList.asJava
+        |> ValueMut.createObject
     }
 
   def sumClass[T](
@@ -120,7 +99,7 @@ object SurreaEncoder {
       claassInfo: => List[(String, SurrealEncoder[?])]
   ): SurrealEncoder[T] =
     new SurrealEncoder[T] {
-      override def encode(x: T): String = {
+      override def encode(x: T) = {
         val ord = s.ordinal(x)
         val (_, instance) = claassInfo(ord)
         instance.asInstanceOf[SurrealEncoder[Any]].encode(x)

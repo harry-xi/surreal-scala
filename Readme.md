@@ -1,3 +1,3 @@
 # Surreal Scala
 
-Due to some [issues](https://github.com/surrealdb/surrealdb.java/issues/100) with the official SDK that this project relies on, I had to splice the sql myself in order to implement the functionality, and I made a limited effort to secure it (escapes the string input), so I can't ensure that it is secure.
+This project now relies on a [fork](https://github.com/harry-xi/surrealdb.java) of the official sdk, you can build from this fork yourself or get the required jar from its action, and put them into `./lib` folder.

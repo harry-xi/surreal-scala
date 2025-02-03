@@ -8,11 +8,10 @@ import SurreaEncoder.given
 
 extension [T](x: T) inline def |>[U](f: T => U) = f(x)
 
-case class ClassA(n:Option[Int])
-
+case class ClassA(id:RecordId,n:Option[Int])
+case class ClassB(id:String,n:Option[Int])
 def q(db:Surreal) = 
-  db.queryWith("RETURN <set>$a",("a"->List(1,2,3,4,5,6,6,7)))(0).to[List[Long]]
-
+  db.query("return book:{aa:b:`a⟩l⟨l`}")(0).to[RecordId]
 
 @main def main =
     println("hello world")

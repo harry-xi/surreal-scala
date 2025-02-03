@@ -3,3 +3,5 @@
 .vscode/
 out/
 db/
+surrealdb-0.2.1-fork.jar
+# it is too big ti save in git

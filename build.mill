@@ -4,10 +4,14 @@ import mill._, scalalib._
 
 object `surreal-scala` extends ScalaModule {
   def scalaVersion = "3.6.3"
-  def ivyDeps = Agg(
-     ivy"com.surrealdb:surrealdb:0.2.1",
-     ivy"org.apache.commons:commons-text:1.13.0",
-  )
+  // def ivyDeps = Agg(
+  //    ivy"com.surrealdb:surrealdb:0.2.1",
+  // )
+  def unmanagedClasspath = Task {
+    println(millSourcePath)
+    if (!os.exists(millSourcePath / "lib")) Agg()
+    else Agg.from(os.list(millSourcePath / "lib").map(PathRef(_)))
+  }
 
   object test extends ScalaTests {
     def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.8.5")
