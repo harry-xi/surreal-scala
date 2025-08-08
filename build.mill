@@ -12,15 +12,10 @@ object `surreal-scala` extends ScalaModule with PublishModule {
     versionControl = VersionControl.github("harry-xi", "surreal-scala"),
     developers = Seq(Developer("harryxi", "harryxi", "https://github.com/harry-xi"))
   )
-  def scalaVersion = "3.6.3"
-  // def ivyDeps = Agg(
-  //    ivy"com.surrealdb:surrealdb:0.2.1",
-  // )
-  def unmanagedClasspath = Task {
-    println(millSourcePath)
-    if (!os.exists(millSourcePath / "lib")) Agg()
-    else Agg.from(os.list(millSourcePath / "lib").map(PathRef(_)))
-  }
+  def scalaVersion = "3.7.2"
+  def ivyDeps = Agg(
+     ivy"com.surrealdb:surrealdb:1.0.0-beta.1",
+  )
 
   object test extends ScalaTests {
     def ivyDeps = Agg(ivy"com.lihaoyi::utest:0.8.5")

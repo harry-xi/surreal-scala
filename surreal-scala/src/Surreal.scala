@@ -43,9 +43,9 @@ class Surreal(val db:com.surrealdb.Surreal) extends AutoCloseable {
       case _: EmptyTuple => db.query(sql).toSeq
       case tup: Tuple2[String, t] =>
         val value = summonInline[SurrealEncoder[t]].encode(tup._2)
-        db.queryWithValue(sql,Map(tup._1->value).asJava).toSeq
+        db.queryBind(sql,Map(tup._1->value).asJava).toSeq
       case _: (Tuple2[String, t] *: ts) =>
-        db.queryWithValue(sql,summonVars[Vars](vars).toMap.asJava).toSeq
+        db.queryBind(sql,summonVars[Vars](vars).toMap.asJava).toSeq
       case _ =>
         scala.compiletime.error(
           "the vars should be a tuple of (string,?:SurrealEncoder)"
