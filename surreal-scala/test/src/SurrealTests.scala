@@ -7,7 +7,6 @@ object SurrealCast extends TestSuite {
   import scala.concurrent.duration.Duration
   import java.util.concurrent.TimeUnit
   import java.time.ZonedDateTime
-  import SurreaEncoder.given
   def tests = Tests {
     case class ClassA(n: List[String])
     test("list") {
@@ -31,7 +30,6 @@ object SurrealCast extends TestSuite {
     test("data time"){
       val zdt = ZonedDateTime.now()
       val back = Using(Surreal("memory")) { db =>
-        
         db.queryWith(
           "RETURN $a",
           ("a" -> zdt)
@@ -39,6 +37,24 @@ object SurrealCast extends TestSuite {
           .to[ZonedDateTime]
       }.get
       assert(zdt.isEqual(back))
+    }
+    test("some"){
+      assert(Using(Surreal("memory")) { db =>
+        db.queryWith(
+          "return $a",
+          ("a" -> Some("hello"))
+        )(0)
+          .to[String]
+      }.get == "hello")
+    }
+    test("none"){
+      val res = Using(Surreal("memory")) { db =>
+        db.queryWith(
+          "return $a",
+          ("a" -> None)
+        )(0)
+      }.get
+      assert(res.isNull())
     }
   }
 }

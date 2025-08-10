@@ -12,7 +12,7 @@ import scala.collection.JavaConverters.*
 trait SurrealEncoder[T]:
   def encode(v: T): ValueMut
 
-object SurreaEncoder {
+object SurrealEncoder {
   import scala.deriving.*
   import scala.compiletime.*
 
@@ -34,14 +34,14 @@ object SurreaEncoder {
   given SurrealEncoder[Boolean] with
     def encode(v: Boolean) = ValueMut.createBoolean(v)
 
-  given stringEncoedr: SurrealEncoder[String] with
+  given SurrealEncoder[String] with
     def encode(v: String) = ValueMut.createString(v)
 
   given [D <: Duration]: SurrealEncoder[D] with
-    def encode(v: D) = 
-      v.toNanos 
-      |> java.time.Duration.ofNanos
-      |> ValueMut.createDuration
+    def encode(v: D) =
+      v.toNanos
+        |> java.time.Duration.ofNanos
+        |> ValueMut.createDuration
 
   given SurrealEncoder[ZonedDateTime] with
     def encode(v: ZonedDateTime) = ValueMut.createDatetime(v)
@@ -52,7 +52,13 @@ object SurreaEncoder {
   given [T](using s: SurrealEncoder[T]): SurrealEncoder[Option[T]] with
     def encode(v: Option[T]) = v match
       case Some(value) => s.encode(value)
-      case None        => null // todo: make sure it result in a surreal Null not None
+      case None        => ValueMut.createNull()
+      
+  given [T](using s: SurrealEncoder[T]): SurrealEncoder[Some[T]] with
+    def encode(v: Some[T]) = s.encode(v.value)
+
+  given SurrealEncoder[None.type] with
+    def encode(v: None.type) = ValueMut.createNull()
 
   given [T](using s: SurrealEncoder[T]): SurrealEncoder[List[T]] with
     override def encode(x: List[T]) =
@@ -89,20 +95,25 @@ object SurreaEncoder {
           .zip(classInfo)
           .map { (value, info) =>
             val (name, instance) = info
-            EntryMut.newEntry(name,instance.asInstanceOf[SurrealEncoder[Any]].encode(value))
-          }.toList.asJava
-        |> ValueMut.createObject
+            EntryMut.newEntry(
+              name,
+              instance.asInstanceOf[SurrealEncoder[Any]].encode(value)
+            )
+          }
+          .toList
+          .asJava
+          |> ValueMut.createObject
     }
 
-  def sumClass[T](
-      s: Mirror.SumOf[T],
-      claassInfo: => List[(String, SurrealEncoder[?])]
-  ): SurrealEncoder[T] =
-    new SurrealEncoder[T] {
-      override def encode(x: T) = {
-        val ord = s.ordinal(x)
-        val (_, instance) = claassInfo(ord)
-        instance.asInstanceOf[SurrealEncoder[Any]].encode(x)
-      }
-    }
+  // def sumClass[T](
+  //     s: Mirror.SumOf[T],
+  //     claassInfo: => List[(String, SurrealEncoder[?])]
+  // ): SurrealEncoder[T] =
+  //   new SurrealEncoder[T] {
+  //     override def encode(x: T) = {
+  //       val ord = s.ordinal(x)
+  //       val (_, instance) = claassInfo(ord)
+  //       instance.asInstanceOf[SurrealEncoder[Any]].encode(x)
+  //     }
+  //   }
 }
