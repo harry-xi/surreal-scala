@@ -8,6 +8,7 @@ import scala.concurrent.duration.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.JavaConverters.*
+import top.harryxi.surreal.HelperOps.*
 
 trait SurrealEncoder[T]:
   def encode(v: T): ValueMut
@@ -63,6 +64,12 @@ object SurrealEncoder {
   given [T](using s: SurrealEncoder[T]): SurrealEncoder[List[T]] with
     override def encode(x: List[T]) =
       x.map(s.encode).asJava |> ValueMut.createArray
+
+  given [T](using s: SurrealEncoder[T]): SurrealEncoder[Map[String,T]] with
+    override def encode(x: Map[String,T]) =
+      x.map { (k, v) =>
+        EntryMut.newEntry(k, s.encode(v))
+      }.toList.asJava |> ValueMut.createObject
 
   inline given derived[T](using m: Mirror.Of[T]): SurrealEncoder[T] =
     val elemNames = summonNames[m.MirroredElemLabels]

@@ -6,6 +6,7 @@ import java.time.ZonedDateTime
 import scala.concurrent.duration.Duration
 import java.util.UUID
 import com.surrealdb.RecordId
+import top.harryxi.surreal.HelperOps.*
 
 extension (v: Value) def to[T](using s: ValueDecoder[T]) = s.decode(v)
 
